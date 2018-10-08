@@ -58,9 +58,37 @@ class ChargingState(Enum):
     WAITING_FOR_CHARGING = 'WAITING_FOR_CHARGING'
 
 
+class CheckControlMessage:
+    """Check control message sent from the server.
+    This class provides a nicer API than parsing the JSON format directly.
+    """
+
+    def __init__(self, ccm_dict: dict):
+        self._ccm_dict = ccm_dict
+
+    @property
+    def description_long(self) -> str:
+        """Long description of the check control message."""
+        return self._ccm_dict["ccmDescriptionLong"]
+
+    @property
+    def description_short(self) -> str:
+        """Short description of the check control message."""
+        return self._ccm_dict["ccmDescriptionShort"]
+
+    @property
+    def ccm_id(self) -> int:
+        """id of the check control message."""
+        return int(self._ccm_dict["ccmId"])
+
+    @property
+    def mileage(self) -> int:
+        """Mileage of the vehicle when the check control message appeared."""
+        return int(self._ccm_dict["ccmMileage"])
+
+
 def backend_parameter(func):
     """Decorator for parameters reading data from the backend.
-
     Errors are handled in a default way.
     """
     def _func_wrapper(self: 'VehicleState', *args, **kwargs):
@@ -105,7 +133,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @backend_parameter
     def attributes(self) -> dict:
         """Retrieve all attributes from the sever.
-
         This does not parse the results in any way.
         """
         return self._attributes
@@ -120,7 +147,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @backend_parameter
     def gps_position(self) -> (float, float):
         """Get the last known position of the vehicle.
-
         Returns a tuple of (latitue, longitude).
         This only provides data, if the vehicle tracking is enabled!
         """
@@ -135,7 +161,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @backend_parameter
     def is_vehicle_tracking_enabled(self) -> bool:
         """Check if the position tracking of the vehicle is enabled.
-
         The server return "OK" if tracking is enabled and "DRIVER_DISABLED" if it is disabled in the vehicle.
         """
         return self._attributes['position']['status'] == 'OK'
@@ -144,7 +169,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @backend_parameter
     def mileage(self) -> int:
         """Get the mileage of the vehicle.
-
         Returns a tuple of (value, unit_of_measurement)
         """
         return int(self._attributes['mileage'])
@@ -153,7 +177,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @backend_parameter
     def remaining_range_fuel(self) -> int:
         """Get the remaining range of the vehicle on fuel.
-
         Returns a tuple of (value, unit_of_measurement)
         """
         return int(self._attributes['remainingRangeFuel'])
@@ -162,7 +185,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @backend_parameter
     def remaining_fuel(self) -> int:
         """Get the remaining fuel of the vehicle.
-
         Returns a tuple of (value, unit_of_measurement)
         """
         return int(self._attributes['remainingFuel'])
@@ -237,7 +259,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @backend_parameter
     def parking_lights(self) -> ParkingLightState:
         """Get status of parking lights.
-
         :returns None if status is unknown.
         """
         return ParkingLightState(self.attributes['parkingLight'])
@@ -245,7 +266,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @property
     def are_parking_lights_on(self) -> bool:
         """Get status of parking lights.
-
         :returns None if status is unknown.
         """
         lights = self.parking_lights
@@ -273,7 +293,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
     @backend_parameter
     def remaining_range_total(self) -> int:
         """Get the total remaining range of the vehicle in kilometers.
-
         That is electrical range + fuel range.
         """
         result = 0
@@ -311,13 +330,13 @@ class VehicleState:  # pylint: disable=too-many-public-methods
 
     @property
     @backend_parameter
-    def check_control_messages(self) -> List:
+    def check_control_messages(self) -> List[CheckControlMessage]:
         """List of check control messages.
-
         Right now they are not parsed, as we do not have sample data with CC messages.
         See issue https://github.com/m1n3rva/bimmer_connected/issues/55
         """
-        return self._attributes.get('checkControlMessages', [])
+        messages = self._attributes.get('checkControlMessages', [])
+        return [CheckControlMessage(m) for m in messages]
 
     @property
     @backend_parameter
@@ -328,7 +347,6 @@ class VehicleState:  # pylint: disable=too-many-public-methods
 
 class Lid:  # pylint: disable=too-few-public-methods
     """A lid of the vehicle.
-
     Lids are: Doors + Trunk + Hatch
     """
 
@@ -353,7 +371,6 @@ class Lid:  # pylint: disable=too-few-public-methods
 
 class Window(Lid):  # pylint: disable=too-few-public-methods
     """A window of the vehicle.
-
     A window can be a normal window of the car or the sun roof.
     """
     pass
